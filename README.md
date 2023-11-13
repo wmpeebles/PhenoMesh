@@ -1,2 +1,2 @@
 # PhenoMesh
-A tool for estimating plant phenotypes from 3d mesh data
+A tool for phenotyping plants from 3d meshes.

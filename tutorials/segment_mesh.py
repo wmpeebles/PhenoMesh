@@ -32,7 +32,7 @@ field.plots["102"] = Plot()
 field.plots["102"].observations["2023-04-11_mesh"] = observation
 
 # View the observation
-field.plots["102"].observations["2023-04-11_mesh"].view()
+#field.plots["102"].observations["2023-04-11_mesh"].view()
 
 # The next step is segmenting the plot mesh into individual plant meshes
 # To do this we'll use a technique that finds cross-sections in a mesh with attributes consistent with what we would
@@ -41,12 +41,20 @@ cross_sections = CrossSections()
 
 # Find cross-sections in our mesh
 cross_sections.find(source_mesh=mesh.data.to_legacy(), resolution=0.003, thickness=0.003,
-                    samples=3, min_points=10, max_points=100, max_perimeter=None, max_area=None)
+                    n_samples=3, min_points=None, max_points=None, max_perimeter=None, max_area=10)
+#print(cross_sections.centroids.point["positions"])
+#print(cross_sections.vertices.point["positions"])
+
+cross_sections.print_stats()
+cross_sections.view_centroids()
+cross_sections.view_vertices()
 
 # Label cross-sections using hdbscan
 cross_sections.label(leaf_size=40, min_cluster_size=200, min_samples=10, gen_min_span_tree=True)
 
 cross_sections.print_stats()
+cross_sections.view_centroids()
+cross_sections.view_vertices()
 
 # Rank cross-sections
 cross_sections.rank(resolution=0.01)
