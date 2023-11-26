@@ -4,6 +4,8 @@ import numpy as np
 
 
 def connect_loops_blender(line_set, type='CLOSED', interpolation='PATH', number_cuts=5, smoothness=2):
+    # TODO: Merge by distance, otherwise bridging will act strangely!
+
     vertices = np.asarray(line_set.points)
     edges = np.asarray(line_set.lines)
 

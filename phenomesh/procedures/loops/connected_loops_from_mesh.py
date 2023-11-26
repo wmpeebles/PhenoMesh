@@ -1,11 +1,17 @@
-import open3d as o3d
+import xarray as xr
 import numpy as np
+import open3d as o3d
 import networkx as nx
 from numba import njit
 from scipy.spatial import KDTree
 import time
 from tqdm import tqdm
 import copy
+
+class Loop:
+    def __init__(self):
+        self.line_set = o3d.t.geometry.LineSet()
+
 
 class LoopSet:
     def __init__(self, mesh=o3d.t.geometry.TriangleMesh()):
@@ -16,9 +22,10 @@ class LoopSet:
         default attribute lines shape (N, 1).
         Conditions can be imposed on loop sampling to ensure loops are
         """
-        self.line_set = o3d.t.geometry.LineSet()
         self.mesh = mesh
         self.bbox = self.mesh.get_oriented_bounding_box()
+
+        self.line_set = o3d.t.geometry.LineSet()
 
         self.G = nx.Graph()
         self.connected_components = list()
@@ -65,9 +72,8 @@ class LoopSet:
         timer.reset()
 
         if decimate is not None:
-            #TODO: Decimate ignores colors
+            #TODO: Decimate does not keep original mesh colors?
             self.mesh = self.mesh.simplify_quadric_decimation(target_reduction=decimate)
-            #self.mesh.ver
             timer.log("Decimating mesh")
 
         if samples is not None:
@@ -208,7 +214,10 @@ class LoopSet:
             self._remove_neighboring_loops(distance=distance)
             timer.log(f"Removing neighboring loops with distance: {distance}")
 
-    def _filter_loops(self, labels=np.array([])):
+    def _filter_loops(self):
+        # Return new loops opject
+
+    def _filter_loops_old(self, labels=np.array([])):
         labels = labels.reshape(-1)
         loop_mask = np.isin(self.loop_labels, labels)
         loop_mask_t = o3d.core.Tensor(loop_mask)

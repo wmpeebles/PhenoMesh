@@ -72,6 +72,7 @@ class Loop:
         self.is_valid = None
 
         self.G = nx.Graph()
+        self.line_set: o3d.geometry.LineSet() = None
 
     def calculate_normal(self, normal):
         if normal is not None:
@@ -258,6 +259,7 @@ class LoopSet:
         #print(len(loops))
         loop_set.bbox = self.bbox
         loop_set.mesh = self.mesh
+        loop_set.loops_to_lineset()
 
         return loop_set
 
@@ -334,6 +336,7 @@ class LoopSet:
 
                 self.loops += self._find_loops(points, lines)
             self._to_graph()
+            self.loops_to_lineset()
         else:
             raise Exception(f"Slicing method '{method}' is not valid. Choose one of 'exact' or 'approximate'")
 
@@ -442,18 +445,8 @@ class LoopSet:
         vis.destroy_window()
 
     def connect_loops(self):
-        line_sets = None
-
-        for loop in self.loops:
-            line_set = self._loop_to_lineset(loop)
-            # vis.add_geometry(line_set)
-            if line_sets is None:
-                line_sets = line_set
-            else:
-                line_sets += line_set
-
         loop_mesh = LoopMesh()
-        loop_mesh.tetra_mesh = connect_loops_blender(line_sets)
+        loop_mesh.tetra_mesh = connect_loops_blender(self.line_set)
         #print(self.mesh)
         loop_mesh.tetra_mesh = add_colors_and_normals(self.mesh, loop_mesh.tetra_mesh)
         loop_mesh.bbox = self.bbox
@@ -463,7 +456,7 @@ class LoopSet:
         with open(path, 'rb') as f:
             self.G = pickle.load(f)
 
-    def write_line_set(self, path):
+    def loops_to_lineset(self):
         line_sets = None
 
         for loop in self.loops:
@@ -474,7 +467,10 @@ class LoopSet:
             else:
                 line_sets += line_set
 
-        o3d.io.write_line_set(path, line_sets)
+        self.line_set = line_sets
+
+    def write_line_set(self, path):
+        o3d.io.write_line_set(path, self.line_set)
 
     def write(self, path):
         #nx.write_gml(self.G, path=path, stringizer=nx.readwrite.gml.literal_stringizer(self.G)) # TODO: Won't work because of graph inside graph
@@ -482,6 +478,84 @@ class LoopSet:
         #    pickle.dump(copy.deepcopy(self.G), f, pickle.HIGHEST_PROTOCOL)
         #    # TODO: get TypeError: cannot pickle 'open3d.cuda.pybind.geometry.OrientedBoundingBox' object
         pass
+
+
+class LineSet:
+    def __init__(self, line_set=None):
+        self.line_set: o3d.geometry.LineSet = line_set
+        self.points, self.lines = self._line_set_points_and_lines()
+        self.loop_points, self.loop_point_positions, self.point_loops = self._create_point_to_loop_mapping()
+
+    def _line_set_points_and_lines(self):
+        points = np.asarray(self.line_set.points)
+        lines = np.asarray(self.line_set.lines)
+        return points, lines
+
+    def _create_point_to_loop_mapping(self):
+        # Using NetworkX to find connected components
+        G = nx.Graph()
+        G.add_edges_from(self.lines)
+        loop_points = {i: set(comp) for i, comp in enumerate(nx.connected_components(G))}
+        loop_point_positions = self._get_positions_of_loop_points(loop_points)
+        point_loops = {node: loop_idx for loop_idx, nodes in loop_points.items() for node in nodes}
+        return loop_points, loop_point_positions, point_loops
+
+    def _get_positions_of_loop_points(self, loop_points):
+        loop_point_positions = {}
+        for loop in loop_points.keys():
+            point_positions = []
+            for point in loop_points[loop]:
+                point_positions.append(self.points[point])
+            loop_point_positions[loop] = point_positions
+        return loop_point_positions
+
+    def remove_neighboring_loops(self, distance):
+        point_loops = self.line_set.point.loops.numpy().flatten()
+        loop_labels = self.loop_labels.flatten()
+
+        # Building a KDTree for efficient spatial queries
+        kdtree = KDTree(self.points)
+
+        # Set for storing loops to remove
+        loops_to_remove = set()
+
+        # Process each loop only once
+        for loop, points in self.loop_points.items():
+            if loop_label in loops_to_remove:
+                continue
+
+            positions = list
+
+            # Query KDTree for all points within 'distance' for all points in the loop
+            indices_within_distance = kdtree.query_ball_point(loop_points, distance)
+
+            # Flattening and unique filtering of indices
+            indices_within_distance = set(np.unique(np.hstack(indices_within_distance)))
+
+            # Remove indices belonging to the current loop
+            indices_within_distance -= set(loop_points_indices)
+
+            # Identifying loops to remove based on proximity and perimeter comparison
+            for point_idx in indices_within_distance:
+                #print(point_idx)
+                other_loop_label = point_loops[point_idx]
+                #print(other_loop_label)
+                if other_loop_label != loop_label:
+                    current_angle = self.loop_fits[np.where(loop_labels == loop_label)[0][0]][2]
+                    other_angle = self.loop_fits[np.where(loop_labels == other_loop_label)[0][0]][2]
+                    if current_angle < other_angle:
+                        loops_to_remove.add(loop_label)
+                    else:
+                        loops_to_remove.add(other_loop_label)
+
+        loop_to_nodes = copy.deepcopy(self.loop_to_nodes)
+
+        # Removing the identified loops
+        for loop_label in loops_to_remove:
+            del loop_to_nodes[loop_label]
+
+        # Update line set to reflect the removals
+        self._filter_loops(labels=np.array(list(loop_to_nodes.keys())))
 
 
 class LoopMesh:
