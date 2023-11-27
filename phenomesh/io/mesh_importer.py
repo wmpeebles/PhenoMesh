@@ -1,7 +1,6 @@
 import os
-import logging
 import open3d as o3d
-import numpy as np
+
 
 
 class MeshImporter:
@@ -26,13 +25,15 @@ class MeshImporter:
         self.metadata_dir = self.mesh_dir if metadata_dir is None else metadata_dir
         self.metadata_file = self.find_metadata(metadata_dir=self.metadata_dir)
 
-        self.mesh: o3d.geometry.TriangleMesh() = self.import_mesh()
+        self.mesh: o3d.geometry.TriangleMesh() = self._import_mesh()
 
-    def import_mesh(self):
-        """
-        :param mesh_path: path of mesh .ply file
-        :return:
-        """
+    @staticmethod
+    def import_mesh(mesh_path=None, rgb_texture_dir=None, metadata_dir=None):
+        importer = MeshImporter(mesh_path=mesh_path, rgb_texture_dir=rgb_texture_dir,
+                                metadata_dir=metadata_dir)
+        return importer.mesh
+
+    def _import_mesh(self):
         mesh: o3d.geometry.TriangleMesh = o3d.io.read_triangle_mesh(filename=self.mesh_path, print_progress=False)
 
         if mesh.has_triangle_uvs() is False:
@@ -50,6 +51,7 @@ class MeshImporter:
             mesh.compute_triangle_normals()
 
         if self.rgb_texture_files is not None:
+            # See http://www.open3d.org/docs/release/python_example/visualization/index.html#textured-model-py
             pass
 
         if self.metadata_file is not None:

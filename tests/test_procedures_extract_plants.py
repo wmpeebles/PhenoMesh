@@ -9,10 +9,10 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 os.chdir(parent_dir)
 sys.path.insert(0, parent_dir)
 
-from phenomesh.data import get_mesh, get_square, get_cube, get_cylinder
+from phenomesh.data import get_mesh, get_subdivided_mesh, get_square, get_cube, get_cylinder
 from phenomesh.procedures.extract_plants import GeometryFilter as GF
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 plot_mesh = get_mesh()
 
@@ -59,11 +59,5 @@ for mesh_name, mesh in meshes.items():
 
 meshes = {'plot_mesh': plot_mesh}
 
-
-def test_vis_mesh():
-    gf = GF(mesh=plot_mesh, max_angle=-0.9, within_radius=0.02)
-    new_mesh = gf.filter_mesh()
-    o3d.visualization.draw_geometries([plot_mesh])
-    o3d.visualization.draw_geometries([new_mesh])
 
 

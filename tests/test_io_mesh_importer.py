@@ -7,17 +7,17 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 os.chdir(parent_dir)
 sys.path.insert(0, parent_dir)
 
-from phenomesh.io import import_mesh, mesh_importer
+from phenomesh.io import MeshImporter
 from phenomesh.data import mesh_paths, get_mesh
 
 for mesh_name, mesh_path in mesh_paths.items():
     def test_mesh_path_exists():
         assert os.path.exists(mesh_path) is True, f"mesh_path: {mesh_path}"
 
-    #importer = mesh_importer.MeshImporter(mesh_path=mesh_path)
-    #importer.import_mesh()
+    def test_mesh_path():
+        assert isinstance(mesh_path, str)
 
-    mesh = import_mesh(mesh_path)
+    mesh = MeshImporter.import_mesh(mesh_path=mesh_path)
 
     def test_mesh_imported_successfully():
         assert isinstance(mesh, o3d.geometry.TriangleMesh)

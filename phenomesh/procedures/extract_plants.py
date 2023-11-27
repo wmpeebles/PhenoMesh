@@ -1,8 +1,8 @@
 """
 Goal here is to extract plants from a mesh that includes non-plant objects, such as soil and stakes
 """
+from .color_space_transformations import generate_soft_mask
 import copy
-
 import open3d as o3d
 import numpy as np
 
@@ -22,6 +22,8 @@ class GeometryFilter:
         perimeter of a circle is present, setting max_angle to -0.75 should allow this perimeter to be
         detected. This is useful in cases where occlusion exists, however an angle closer to 0 can cause
         increasingly planar surfaces to not be filtered out.
+        
+        Tips: meshes with a low point density may benefit from mesh subdivision to add additional vertices
         
         :param mesh: 
         :param max_angle: This value should be between [-1,0], corresponding to [-180°,0°], but
@@ -78,6 +80,14 @@ class GeometryFilter:
     @staticmethod
     def _remove_invalid_points(mesh, point_angles, max_angle):
         invalid_indices = np.argwhere(point_angles > max_angle)
-        # TODO: Add ability to keep
         mesh.remove_vertices_by_index(invalid_indices)
         return mesh
+
+
+class ColorFilter:
+    def __init__(self, mesh):
+        self.mesh = copy.deepcopy(mesh)
+
+    def filter_hue(self, min, max):
+        vertex_rgb_colors = np.asarray(self.mesh.vertex_colors)
+        vertex_hues =
